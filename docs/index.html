@@ -104,9 +104,24 @@
 </style>
 
 <div id="app"></div>
-<script id="app-state" type="application/json">{"screen":"lobby","currentIndex":0,"revealed":false,"teams":{},"votes":{}}</script>
 
-<script>
+<script type="module">
+// ---- firebase ----
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCzZvnyCaY0lyH5h6k5j_4KVBYl4U17njU",
+  authDomain: "ai-eller-irl.firebaseapp.com",
+  databaseURL: "https://ai-eller-irl-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ai-eller-irl",
+  storageBucket: "ai-eller-irl.firebasestorage.app",
+  messagingSenderId: "156100101116",
+  appId: "1:156100101116:web:c7801de8bc0f7c7028a879"
+};
+const db = getDatabase(initializeApp(firebaseConfig));
+const stateRef = ref(db, 'quiz');
+
 // ---- content ----
 /*QUESTIONS_START*/
 const QUESTIONS = [
@@ -210,7 +225,6 @@ function renderMedia(q) {
 // ---- state plumbing ----
 function defaultState() { return { screen: 'lobby', currentIndex: 0, revealed: false, teams: {}, votes: {} }; }
 let STATE = defaultState();
-let READONLY = false;
 let isHost = localStorage.getItem('role') === 'host';
 let roleChosen = localStorage.getItem('role') !== null;
 
@@ -226,151 +240,63 @@ function resetRole() {
   render();
 }
 
-const STATE_TAG_OPEN = '<script id="app-state" type="application/json">';
-const STATE_TAG_CLOSE = '<\/script>';
-
-async function fetchFreshSource() {
-  const res = await fetch(location.href, { cache: 'no-store' });
-  if (!res.ok) throw new Error('fetch-source-failed');
-  return await res.text();
-}
-
-function readState(sourceHtml) {
-  const startIdx = sourceHtml.indexOf(STATE_TAG_OPEN);
-  if (startIdx === -1) throw new Error('state-tag-not-found');
-  const contentStart = startIdx + STATE_TAG_OPEN.length;
-  const endIdx = sourceHtml.indexOf(STATE_TAG_CLOSE, contentStart);
-  if (endIdx === -1) throw new Error('state-tag-not-closed');
-  return JSON.parse(sourceHtml.slice(contentStart, endIdx));
-}
-
-function spliceState(sourceHtml, nextState) {
-  const startIdx = sourceHtml.indexOf(STATE_TAG_OPEN);
-  const contentStart = startIdx + STATE_TAG_OPEN.length;
-  const endIdx = sourceHtml.indexOf(STATE_TAG_CLOSE, contentStart);
-  return sourceHtml.slice(0, contentStart) + JSON.stringify(nextState) + sourceHtml.slice(endIdx);
-}
-
-let artifactNS = null;
-async function getArtifact() {
-  if (artifactNS) return artifactNS;
-  if (!window.claude) return null;
-  artifactNS = await window.claude.use('artifact');
-  return artifactNS;
-}
-
 let lastError = null;
 
-let busy = false;
-
-async function withState(mutate) {
-  if (busy) return { ok: false, reason: 'busy' };
-  busy = true;
-  try {
-    return await withStateInner(mutate);
-  } finally {
-    busy = false;
-  }
-}
-
-async function withStateInner(mutate) {
+onValue(stateRef, snap => {
+  const v = snap.val() || {};
+  STATE = { screen: v.screen || 'lobby', currentIndex: v.currentIndex || 0, revealed: !!v.revealed, teams: v.teams || {}, votes: v.votes || {} };
   lastError = null;
-  let artifact, sourceHtml, current;
-  try {
-    artifact = await getArtifact();
-    sourceHtml = await fetchFreshSource();
-    current = readState(sourceHtml);
-  } catch (err) {
-    console.error('state load failed', err);
-    lastError = 'Kunde inte hamta senaste status (' + ((err && err.code) || (err && err.message) || 'okant fel') + ').';
-    render();
-    return { ok: false, reason: 'load-error' };
-  }
-  const next = mutate(current);
-  if (!artifact) {
-    STATE = next; render();
-    return { ok: false, reason: 'no-capability' };
-  }
-  try {
-    await artifact.publish(spliceState(sourceHtml, next));
-    STATE = next; render();
-    return { ok: true };
-  } catch (err) {
-    if (err && err.code === 'conflict') { location.reload(); return { ok: false, reason: 'conflict' }; }
-    if (err && (err.code === 'not_writer' || err.code === 'not_granted')) { READONLY = true; render(); return { ok: false, reason: 'readonly' }; }
-    console.error('publish failed', err);
-    lastError = 'Kunde inte spara (' + ((err && err.code) || (err && err.message) || 'okant fel') + ').';
-    render();
-    return { ok: false, reason: (err && err.code) || 'unknown' };
-  }
-}
+  render();
+}, err => {
+  lastError = 'Kunde inte ansluta till servern (' + err.message + ').';
+  render();
+});
 
-function stashPending(action) { sessionStorage.setItem('pendingAction', JSON.stringify(action)); }
-function clearPending() { sessionStorage.removeItem('pendingAction'); }
-
-async function tryResumePending() {
-  const raw = sessionStorage.getItem('pendingAction');
-  if (!raw) return;
-  let action; try { action = JSON.parse(raw); } catch (e) { clearPending(); return; }
-  const teamId = localStorage.getItem('teamId');
-  if (action.type === 'join') {
-    if (teamId && STATE.teams[teamId]) { clearPending(); return; }
-    await doJoin(action.name, true);
-  } else if (action.type === 'vote') {
-    if (teamId && STATE.votes[action.qIndex] && STATE.votes[action.qIndex][teamId] === action.choice) { clearPending(); return; }
-    await doVote(action.qIndex, action.choice, true);
+async function writeState(fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error('write failed', err);
+    lastError = 'Kunde inte spara (' + err.message + ').';
+    render();
   }
 }
 
 // ---- team actions ----
-async function doJoin(name, isResume) {
+async function doJoin(name) {
   let teamId = localStorage.getItem('teamId');
   if (!teamId) { teamId = crypto.randomUUID(); localStorage.setItem('teamId', teamId); }
-  localStorage.setItem('teamName', name);
-  if (!isResume) stashPending({ type: 'join', name });
-  const result = await withState(s => {
-    s.teams[teamId] = { name, score: (s.teams[teamId] && s.teams[teamId].score) || 0 };
-    return s;
-  });
-  if (result.ok) clearPending();
+  const score = (STATE.teams[teamId] && STATE.teams[teamId].score) || 0;
+  await writeState(() => set(ref(db, `quiz/teams/${teamId}`), { name, score }));
 }
 
-async function doVote(qIndex, choice, isResume) {
+async function doVote(qIndex, choice) {
   const teamId = localStorage.getItem('teamId');
-  if (!teamId) return;
-  if (!isResume) stashPending({ type: 'vote', qIndex, choice });
-  const result = await withState(s => {
-    if (s.currentIndex !== qIndex || s.revealed) return s;
-    s.votes[qIndex] = s.votes[qIndex] || {};
-    s.votes[qIndex][teamId] = choice;
-    return s;
-  });
-  if (result.ok) clearPending();
+  if (!teamId || STATE.currentIndex !== qIndex || STATE.revealed) return;
+  await writeState(() => set(ref(db, `quiz/votes/${qIndex}/${teamId}`), choice));
 }
 
 // ---- host actions ----
 async function hostStart() {
-  await withState(s => { s.screen = 'playing'; s.currentIndex = 0; s.revealed = false; return s; });
+  await writeState(() => update(stateRef, { screen: 'playing', currentIndex: 0, revealed: false }));
 }
 async function hostReveal() {
-  await withState(s => {
-    if (s.revealed) return s;
-    const q = QUESTIONS[s.currentIndex];
-    const votes = s.votes[s.currentIndex] || {};
-    for (const [teamId, choice] of Object.entries(votes)) {
-      if (choice === q.answer && s.teams[teamId]) s.teams[teamId].score = (s.teams[teamId].score || 0) + 1;
+  if (STATE.revealed) return;
+  const q = QUESTIONS[STATE.currentIndex];
+  const votes = STATE.votes[STATE.currentIndex] || {};
+  const updates = { revealed: true };
+  for (const [teamId, choice] of Object.entries(votes)) {
+    if (choice === q.answer && STATE.teams[teamId]) {
+      updates[`teams/${teamId}/score`] = (STATE.teams[teamId].score || 0) + 1;
     }
-    s.revealed = true;
-    return s;
-  });
+  }
+  await writeState(() => update(stateRef, updates));
 }
 async function hostNext() {
-  await withState(s => {
-    if (!s.revealed) return s;
-    const nextIndex = s.currentIndex + 1;
-    if (nextIndex >= QUESTIONS.length) { s.screen = 'ended'; return s; }
-    s.currentIndex = nextIndex; s.revealed = false; return s;
-  });
+  if (!STATE.revealed) return;
+  const nextIndex = STATE.currentIndex + 1;
+  const updates = nextIndex >= QUESTIONS.length ? { screen: 'ended' } : { currentIndex: nextIndex, revealed: false };
+  await writeState(() => update(stateRef, updates));
 }
 
 function sortedTeams() {
@@ -406,8 +332,6 @@ function renderLeaderboard() {
 }
 
 function renderHost() {
-  if (READONLY) return `<div class="center-msg">Den här vyn är skrivskyddad. Be ägaren dela artefakten med redigeringsbehörighet för värdvyn.</div>`;
-
   if (STATE.screen === 'lobby') {
     const teams = sortedTeams();
     return `<div class="host-stage">
@@ -464,8 +388,6 @@ function renderHost() {
 function renderTeam() {
   const teamId = localStorage.getItem('teamId');
   const me = teamId ? STATE.teams[teamId] : null;
-
-  if (READONLY) return `<div class="center-msg">Den här vyn är skrivskyddad just nu. Ladda om sidan.</div>`;
 
   if (!me) {
     return `<div class="team-view">
@@ -535,22 +457,14 @@ function wireEvents() {
   if (byId('btn-next')) byId('btn-next').addEventListener('click', hostNext);
   if (byId('btn-join')) byId('btn-join').addEventListener('click', () => {
     const val = byId('team-name-input').value.trim();
-    if (val) doJoin(val, false);
+    if (val) doJoin(val);
   });
   if (byId('team-name-input')) byId('team-name-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { const val = e.target.value.trim(); if (val) doJoin(val, false); }
+    if (e.key === 'Enter') { const val = e.target.value.trim(); if (val) doJoin(val); }
   });
-  if (byId('btn-vote-ai')) byId('btn-vote-ai').addEventListener('click', () => doVote(STATE.currentIndex, 'AI', false));
-  if (byId('btn-vote-irl')) byId('btn-vote-irl').addEventListener('click', () => doVote(STATE.currentIndex, 'REAL', false));
+  if (byId('btn-vote-ai')) byId('btn-vote-ai').addEventListener('click', () => doVote(STATE.currentIndex, 'AI'));
+  if (byId('btn-vote-irl')) byId('btn-vote-irl').addEventListener('click', () => doVote(STATE.currentIndex, 'REAL'));
 }
 
-// ---- boot ----
-(async function boot() {
-  try {
-    const tag = document.getElementById('app-state');
-    if (tag) STATE = JSON.parse(tag.textContent);
-  } catch (e) { console.error('initial state parse failed', e); }
-  render();
-  await tryResumePending();
-})();
+render();
 </script>
