@@ -201,7 +201,7 @@ const CREDITS = [
 /*CREDITS_END*/
 
 function renderMedia(q) {
-  if (q.modality === 'image') return `<img alt="Fragans bild" src="${q.src}" />`;
+  if (q.modality === 'image') return `<img alt="Frågans bild" src="${q.src}" />`;
   if (q.modality === 'video') return `<video controls preload="metadata" src="${q.src}"></video>`;
   if (q.modality === 'audio') return `<audio controls preload="metadata" src="${q.src}"></audio>`;
   return `<div class="text-passage">${escapeHtml(q.text)}</div>`;
@@ -382,9 +382,9 @@ function renderRolePicker() {
   return `<div class="team-view">
     <div class="team-header"><h1 class="display" style="font-size:1.4rem;">AI eller IRL</h1></div>
     <div class="join-form">
-      <p class="eyebrow">Vad ar det har for enhet?</p>
+      <p class="eyebrow">Vad är det här för enhet?</p>
       <button class="btn-primary" id="btn-role-team" style="padding:1.2rem;">Lag (mobil/dator)</button>
-      <button id="btn-role-host" style="padding:1.2rem;">Vardskarm (projektor)</button>
+      <button id="btn-role-host" style="padding:1.2rem;">Värdskärm (projektor)</button>
     </div>
   </div>`;
 }
@@ -397,7 +397,7 @@ function render() {
 
 function renderLeaderboard() {
   const teams = sortedTeams();
-  if (!teams.length) return `<div class="eyebrow">Inga lag anslutna an</div>`;
+  if (!teams.length) return `<div class="eyebrow">Inga lag anslutna än</div>`;
   return `<div class="leaderboard">${teams.map((t, i) => `
     <div class="leaderboard-row card">
       <span>${i + 1}. ${escapeHtml(t.name)}</span>
@@ -406,20 +406,20 @@ function renderLeaderboard() {
 }
 
 function renderHost() {
-  if (READONLY) return `<div class="center-msg">Den har vyn ar skrivskyddad. Be agaren dela artefakten med redigeringsbehorighet for vardvyn.</div>`;
+  if (READONLY) return `<div class="center-msg">Den här vyn är skrivskyddad. Be ägaren dela artefakten med redigeringsbehörighet för värdvyn.</div>`;
 
   if (STATE.screen === 'lobby') {
     const teams = sortedTeams();
     return `<div class="host-stage">
-      <div class="host-topbar"><h1 class="display">AI eller IRL</h1><span class="eyebrow">Vantrum</span></div>
+      <div class="host-topbar"><h1 class="display">AI eller IRL</h1><span class="eyebrow">Väntrum</span></div>
       <div class="card" style="padding:2rem;">
-        <p style="color:var(--text-muted)">Lag ansluter via lanken pa sina egna enheter. Nar alla ar med, tryck Starta.</p>
-        <div class="team-pill-row" style="margin-top:1rem;">${teams.map(t => `<span class="team-pill">${escapeHtml(t.name)}</span>`).join('') || '<span class="eyebrow">Inga lag annu</span>'}</div>
+        <p style="color:var(--text-muted)">Lag ansluter via länken på sina egna enheter. När alla är med, tryck Starta.</p>
+        <div class="team-pill-row" style="margin-top:1rem;">${teams.map(t => `<span class="team-pill">${escapeHtml(t.name)}</span>`).join('') || '<span class="eyebrow">Inga lag ännu</span>'}</div>
       </div>
       <div class="controls-row"><button class="btn-primary" id="btn-start" ${teams.length ? '' : 'disabled'}>Starta quiz</button></div>
       ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
       <details class="credits">
-        <summary>Kallor och licenser</summary>
+        <summary>Källor och licenser</summary>
         <ul>${CREDITS.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>
       </details>
     </div>`;
@@ -438,7 +438,7 @@ function renderHost() {
   return `<div class="host-stage">
     <div class="host-topbar">
       <h1 class="display">AI eller IRL</h1>
-      <span class="eyebrow">Fraga ${STATE.currentIndex + 1} av ${QUESTIONS.length} &middot; ${MODALITY_LABELS[q.modality]}</span>
+      <span class="eyebrow">Fråga ${STATE.currentIndex + 1} av ${QUESTIONS.length} &middot; ${MODALITY_LABELS[q.modality]}</span>
     </div>
     <div class="media-frame">${renderMedia(q)}</div>
     <div class="team-pill-row">${teams.map(t => {
@@ -451,10 +451,10 @@ function renderHost() {
       }
       return `<span class="${cls}">${escapeHtml(t.name)}${voted ? (STATE.revealed ? extra : ' &middot; svarat') : ''}</span>`;
     }).join('')}</div>
-    ${STATE.revealed ? `<div class="card" style="padding:1.2rem 1.5rem;"><strong>Ratt svar: ${ANSWER_LABELS[q.answer]}</strong></div>` : ''}
+    ${STATE.revealed ? `<div class="card" style="padding:1.2rem 1.5rem;"><strong>Rätt svar: ${ANSWER_LABELS[q.answer]}</strong></div>` : ''}
     <div class="controls-row">
       <button class="btn-primary" id="btn-reveal" ${STATE.revealed ? 'disabled' : ''}>Visa svar</button>
-      <button id="btn-next" ${STATE.revealed ? '' : 'disabled'}>${STATE.currentIndex + 1 >= QUESTIONS.length ? 'Avsluta' : 'Nasta fraga'}</button>
+      <button id="btn-next" ${STATE.revealed ? '' : 'disabled'}>${STATE.currentIndex + 1 >= QUESTIONS.length ? 'Avsluta' : 'Nästa fråga'}</button>
     </div>
     ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
     ${STATE.revealed ? renderLeaderboard() : ''}
@@ -465,7 +465,7 @@ function renderTeam() {
   const teamId = localStorage.getItem('teamId');
   const me = teamId ? STATE.teams[teamId] : null;
 
-  if (READONLY) return `<div class="center-msg">Den har vyn ar skrivskyddad just nu. Ladda om sidan.</div>`;
+  if (READONLY) return `<div class="center-msg">Den här vyn är skrivskyddad just nu. Ladda om sidan.</div>`;
 
   if (!me) {
     return `<div class="team-view">
@@ -473,7 +473,7 @@ function renderTeam() {
       <div class="join-form">
         <label class="eyebrow" for="team-name-input">Lagnamn</label>
         <input type="text" id="team-name-input" placeholder="T.ex. Team Firewall" maxlength="30" autocomplete="off" />
-        <button class="btn-primary" id="btn-join" style="padding:1rem;">Ga med</button>
+        <button class="btn-primary" id="btn-join" style="padding:1rem;">Gå med</button>
         ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
       </div>
     </div>`;
@@ -482,7 +482,7 @@ function renderTeam() {
   if (STATE.screen === 'lobby') {
     return `<div class="team-view">
       <div class="team-header"><h1 class="display" style="font-size:1.4rem;">AI eller IRL</h1><span class="team-chip">${escapeHtml(me.name)}</span></div>
-      <div class="center-msg">Vantar pa att varden startar quizet...</div>
+      <div class="center-msg">Väntar på att värden startar quizet...</div>
     </div>`;
   }
 
@@ -491,7 +491,7 @@ function renderTeam() {
     const rank = teams.findIndex(t => t.id === teamId) + 1;
     return `<div class="team-view">
       <div class="team-header"><h1 class="display" style="font-size:1.4rem;">Slutresultat</h1><span class="team-chip">${escapeHtml(me.name)}</span></div>
-      <div class="center-msg"><div><div class="display" style="font-size:2.4rem;">#${rank}</div><div class="mono" style="color:var(--text-muted);">${me.score} poang</div></div></div>
+      <div class="center-msg"><div><div class="display" style="font-size:2.4rem;">#${rank}</div><div class="mono" style="color:var(--text-muted);">${me.score} poäng</div></div></div>
     </div>`;
   }
 
@@ -501,23 +501,23 @@ function renderTeam() {
   if (STATE.revealed) {
     const correct = myVote === q.answer;
     return `<div class="team-view">
-      <div class="team-header"><span class="eyebrow">Fraga ${STATE.currentIndex + 1} av ${QUESTIONS.length}</span><span class="team-chip">${escapeHtml(me.name)} &middot; ${me.score}p</span></div>
+      <div class="team-header"><span class="eyebrow">Fråga ${STATE.currentIndex + 1} av ${QUESTIONS.length}</span><span class="team-chip">${escapeHtml(me.name)} &middot; ${me.score}p</span></div>
       <div class="vote-area">
-        <div class="result-banner ${correct ? 'correct' : 'wrong'}">${myVote === undefined ? 'Du hann inte rosta' : (correct ? 'Ratt gissat!' : 'Fel gissat')}</div>
-        <div class="eyebrow">Ratt svar: ${ANSWER_LABELS[q.answer]}</div>
+        <div class="result-banner ${correct ? 'correct' : 'wrong'}">${myVote === undefined ? 'Du hann inte rösta' : (correct ? 'Rätt gissat!' : 'Fel gissat')}</div>
+        <div class="eyebrow">Rätt svar: ${ANSWER_LABELS[q.answer]}</div>
       </div>
     </div>`;
   }
 
   return `<div class="team-view">
-    <div class="team-header"><span class="eyebrow">Fraga ${STATE.currentIndex + 1} av ${QUESTIONS.length} &middot; ${MODALITY_LABELS[q.modality]}</span><span class="team-chip">${escapeHtml(me.name)} &middot; ${me.score}p</span></div>
+    <div class="team-header"><span class="eyebrow">Fråga ${STATE.currentIndex + 1} av ${QUESTIONS.length} &middot; ${MODALITY_LABELS[q.modality]}</span><span class="team-chip">${escapeHtml(me.name)} &middot; ${me.score}p</span></div>
     <div class="vote-area">
-      <p style="color:var(--text-muted);">Titta pa skarmen och gissa.</p>
+      <p style="color:var(--text-muted);">Titta på skärmen och gissa.</p>
       <div class="vote-buttons">
         <button class="vote-btn-ai ${myVote === 'AI' ? 'selected' : ''}" id="btn-vote-ai">AI</button>
         <button class="vote-btn-irl ${myVote === 'REAL' ? 'selected' : ''}" id="btn-vote-irl">IRL</button>
       </div>
-      ${myVote ? `<div class="eyebrow">Svar registrerat &mdash; du kan andra dig tills varden visar svaret</div>` : ''}
+      ${myVote ? `<div class="eyebrow">Svar registrerat &mdash; du kan ändra dig tills värden visar svaret</div>` : ''}
       ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
     </div>
   </div>`;
