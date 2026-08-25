@@ -63,11 +63,11 @@ CAT_TEXT = (
 )
 
 QUESTIONS = [
-    media_q("video", "AI", "q01_sora_bodycam.webm"),
+    media_q("video", "AI", "q01_photoreal_train.webm"),
     media_q("image", "REAL", "q02_light_pillars.jpg"),
-    media_q("audio", "AI", "q03_tts.wav"),
+    media_q("audio", "AI", "q03_elevenlabs_adam.mp3"),
     text_q("REAL", LAGERLOF_TEXT),
-    media_q("image", "AI", "q05_netscape_ai.jpg"),
+    media_q("image", "AI", "q05_hotel_coast.jpg"),
     media_q("video", "REAL", "q06_pexels_coffee.mp4"),
     text_q("AI", MORNING_TEXT),
     media_q("audio", "REAL", "q08_librivox_onskenatt.mp3"),
@@ -78,11 +78,11 @@ QUESTIONS = [
 ]
 
 CREDITS = [
-    "Fråga 1 (video, AI): \u201cExample of Sora AI-Generated Police Body Camera Footage\u201d, Wikimedia Commons, public domain.",
+    "Fråga 1 (video, AI): \u201cPhotoreal-train” (OpenAI Sora, mars 2024), Wikimedia Commons, public domain.",
     "Fråga 2 (bild, IRL): Christoph Geisler, \u201cLight pillars over Laramie Wyoming in winter night\u201d, Wikimedia Commons, CC BY-SA 3.0.",
-    "Fråga 3 (ljud, AI): talsyntes med Microsoft Bengt (sv-SE), genererad för detta quiz.",
+    "Fråga 3 (ljud, AI): talsyntes med ElevenLabs (rösten “Adam”), genererad för detta quiz. Obs: engelsk text, undantag från quizets svenska språkregel eftersom rösten lät mer övertygande på engelska.",
     "Fråga 4 (text, IRL): Selma Lagerlöf, Nils Holgerssons underbara resa genom Sverige (1906), källa Wikisource, public domain.",
-    "Fråga 5 (bild, AI): Joseph Ayerle, \u201cMaria and Steve work on the new logo of the Netscape Internet browser (fictional photo)\u201d, Wikimedia Commons, public domain.",
+    "Fråga 5 (bild, AI): Dennis Sylvester Hurd, “Hotel on the Coast”, Wikimedia Commons, CC BY 4.0.",
     "Fråga 6 (video, IRL): \u201cPouring Hot Coffee to Cup\u201d, Pexels-licens.",
     "Fråga 7 (text, AI): skriven av Claude för detta quiz.",
     "Fråga 8 (ljud, IRL): \u201cÖnskenatt\u201d av Karin Boye, uppläst av LibriVox-volontär, public domain.",
