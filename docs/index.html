@@ -298,6 +298,12 @@ async function hostNext() {
   const updates = nextIndex >= QUESTIONS.length ? { screen: 'ended' } : { currentIndex: nextIndex, revealed: false };
   await writeState(() => update(stateRef, updates));
 }
+let restartConfirming = false;
+async function hostRestart() {
+  if (!restartConfirming) { restartConfirming = true; render(); return; }
+  restartConfirming = false;
+  await writeState(() => set(stateRef, defaultState()));
+}
 
 function sortedTeams() {
   return Object.entries(STATE.teams).map(([id, t]) => ({ id, ...t })).sort((a, b) => b.score - a.score);
@@ -331,6 +337,10 @@ function renderLeaderboard() {
     </div>`).join('')}</div>`;
 }
 
+function renderRestartControl() {
+  return `<div class="controls-row"><button id="btn-restart" ${restartConfirming ? 'style="background:var(--bad);color:#fff;border-color:var(--bad);"' : ''}>${restartConfirming ? 'Är du säker? Klicka igen för att starta om' : 'Starta om quizet'}</button></div>`;
+}
+
 function renderHost() {
   if (STATE.screen === 'lobby') {
     const teams = sortedTeams();
@@ -342,6 +352,7 @@ function renderHost() {
       </div>
       <div class="controls-row"><button class="btn-primary" id="btn-start" ${teams.length ? '' : 'disabled'}>Starta quiz</button></div>
       ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
+      ${renderRestartControl()}
       <details class="credits">
         <summary>Källor och licenser</summary>
         <ul>${CREDITS.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>
@@ -353,6 +364,7 @@ function renderHost() {
     return `<div class="host-stage">
       <div class="host-topbar"><h1 class="display">Slutresultat</h1></div>
       ${renderLeaderboard()}
+      ${renderRestartControl()}
     </div>`;
   }
 
@@ -382,6 +394,7 @@ function renderHost() {
     </div>
     ${lastError ? `<div class="error-msg">${escapeHtml(lastError)}</div>` : ''}
     ${STATE.revealed ? renderLeaderboard() : ''}
+    ${renderRestartControl()}
   </div>`;
 }
 
@@ -455,6 +468,7 @@ function wireEvents() {
   if (byId('btn-start')) byId('btn-start').addEventListener('click', hostStart);
   if (byId('btn-reveal')) byId('btn-reveal').addEventListener('click', hostReveal);
   if (byId('btn-next')) byId('btn-next').addEventListener('click', hostNext);
+  if (byId('btn-restart')) byId('btn-restart').addEventListener('click', hostRestart);
   if (byId('btn-join')) byId('btn-join').addEventListener('click', () => {
     const val = byId('team-name-input').value.trim();
     if (val) doJoin(val);
